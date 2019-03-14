@@ -50,11 +50,22 @@ def problem1():
     
 def problem2():
     img = mpimg.imread("curvedriver_wikipedia.jpg")
-    plt.imshow(img)
-    x = plt.ginput(n = 0, timeout = 0)
-    plt.show()
-    for e in x:
-        print(e)
+    def ginput_data():
+        plt.imshow(img)
+        x = plt.ginput(n = 0, timeout = 0)
+        plt.show()
+        for e in x:
+            print(e)
+    # ginput_data()
+    points = []
+    with open("river_data.txt", "r") as f:
+        for line in f:
+            str_list = line.strip().split(" ")
+            num_list = [
+                float(str_list[0][1:-1]),
+                float(str_list[1][:-1])
+            ]
+            points.append(num_list)
 
 if __name__ == "__main__":
     # problem1()
