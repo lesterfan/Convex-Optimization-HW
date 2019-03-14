@@ -48,5 +48,14 @@ def problem1():
         1, 2
     )
     
+def problem2():
+    img = mpimg.imread("curvedriver_wikipedia.jpg")
+    plt.imshow(img)
+    x = plt.ginput(n = 0, timeout = 0)
+    plt.show()
+    for e in x:
+        print(e)
+
 if __name__ == "__main__":
-    problem1()
+    # problem1()
+    problem2()
