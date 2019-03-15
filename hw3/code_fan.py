@@ -80,10 +80,58 @@ def problem2():
         if r != c:
             return np.zeros(Ps[0].shape, dtype = 'float')
         return Ps[r]
+    x_knots = [x_list[I[0]] for I in chunks(x_list, knot_interval)]
+    y_knots = [y_list[I[0]] for I in chunks(y_list, knot_interval)]
+    x_knots_t = [I[0] for I in chunks(x_list, knot_interval)]
+    y_knots_t = [I[0] for I in chunks(y_list, knot_interval)]
+    knots_t = [x_knots_t, y_knots_t]
+    def eq_block(t):
+        result = np.zeros(4 * len(x_knots), dtype = 'float')
+        start = t // knot_interval - 1
+        for k, i in enumerate(range(4*start, 4*(start + 1))):
+            result[i] = t**k
+        for k, i in enumerate(range(4*(start + 1), 4*(start + 2))):
+            result[i] = - t**k
+        return result
+    def first_derivative_block(t):
+        result = np.zeros(4 * len(x_knots), dtype = 'float')
+        start = t // knot_interval - 1
+        def tee(t, k):
+            if k == 0:
+                return 0
+            elif k == 1:
+                return 1
+            elif k == 2:
+                return 2*t
+            elif k == 3:
+                return 3*t**2
+        for k, i in enumerate(range(4*start, 4*(start + 1))):
+            result[i] = tee(t, k)
+        for k, i in enumerate(range(4*(start + 1), 4*(start + 2))):
+            result[i] = - tee(t, k)
+        return result
+    def second_derivative_block(t):
+        result = np.zeros(4 * len(x_knots), dtype = 'float')
+        start = t // knot_interval - 1
+        def tee(t, k):
+            if k == 0:
+                return 0
+            elif k == 1:
+                return 0
+            elif k == 2:
+                return 2
+            elif k == 3:
+                return 6*t
+        for k, i in enumerate(range(4*start, 4*(start + 1))):
+            result[i] = tee(t, k)
+        for k, i in enumerate(range(4*(start + 1), 4*(start + 2))):
+            result[i] = - tee(t, k)
+        return result
     model_results = []
-    for S in (x_list, y_list):
+    for i, S in enumerate((x_list, y_list)):
         Ps = []
         qs = []
+        # Get the matrices for the cost function.
         for I in chunks(S, knot_interval):
             Ps.append(P(I))
             qs.append(q(S, I))
@@ -93,7 +141,19 @@ def problem2():
         big_q = np.vstack(
             [q_I for q_I in qs]
         )
-        sol = solvers.qp(*(matrix(M) for M in (big_P, big_q)))
+        A = []
+        # Equality constraints
+        for t in knots_t[i][1:-1]:
+            A.append(eq_block(t))
+        # 1st derivative constraints
+        for t in knots_t[i][1:-1]:
+            A.append(first_derivative_block(t))
+        # 2nd derivative constraints
+        for t in knots_t[i][1:-1]:
+            A.append(second_derivative_block(t))
+        A = np.array(A, dtype = 'float')
+        b = np.zeros( (A.shape[0], 1), dtype = 'float')
+        sol = solvers.qp(*(matrix(M) for M in (big_P, big_q)), A = matrix(A), b = matrix(b))
         model_results.append(sol['x'])
     # Get spline points
     splines = []
@@ -108,8 +168,6 @@ def problem2():
         splines.append(curr_spline)
 
     # Image and points.
-    x_knots = [x_list[I[0]] for I in chunks(x_list, knot_interval)]
-    y_knots = [y_list[I[0]] for I in chunks(y_list, knot_interval)]
     implot = plt.imshow(img)
     plt.scatter(x_list, y_list, c = 'r', s = 5)
     plt.scatter(splines[0], splines[1], c = 'g', s = 5)
@@ -117,5 +175,5 @@ def problem2():
     plt.show()
 
 if __name__ == "__main__":
-    # problem1()
+    problem1()
     problem2()
